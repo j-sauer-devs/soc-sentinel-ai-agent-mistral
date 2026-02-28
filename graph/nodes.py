@@ -509,10 +509,11 @@ def _interpret_recon_results(
 # ---------------------------------------------------------------------------
 
 def oversight_node(state: SOCState) -> dict:
-    triage = state.get("triage_results", [])
-    enrichment = state.get("enrichment_results", [])
-    forensics = state.get("forensics_results", [])
-    recon = state.get("recon_results", [])
+    # Deduplicate results from re-investigation loops (append-only state accumulates)
+    triage = _dedup_by_alert_id(state.get("triage_results", []))
+    enrichment = _dedup_by_alert_id(state.get("enrichment_results", []))
+    forensics = _dedup_by_alert_id(state.get("forensics_results", []))
+    recon = _dedup_by_alert_id(state.get("recon_results", []))
 
     print(
         f"[Oversight Officer] Cross-verifying {len(triage)} triage, "
@@ -725,11 +726,21 @@ def _build_fallback_verdict(
 # Briefing Writer — generates final human-readable report
 # ---------------------------------------------------------------------------
 
+def _dedup_by_alert_id(results: list[dict]) -> list[dict]:
+    """Deduplicate results by alert_id, keeping the latest entry."""
+    by_id = {}
+    for r in results:
+        aid = r.get("alert_id")
+        if aid:
+            by_id[aid] = r  # last one wins
+    return list(by_id.values())
+
+
 def briefing_node(state: SOCState) -> dict:
     verdict = state.get("oversight_verdict", {})
-    triage = state.get("triage_results", [])
-    enrichment = state.get("enrichment_results", [])
-    recon = state.get("recon_results", [])
+    triage = _dedup_by_alert_id(state.get("triage_results", []))
+    enrichment = _dedup_by_alert_id(state.get("enrichment_results", []))
+    recon = _dedup_by_alert_id(state.get("recon_results", []))
     confidence = state.get("confidence", 0.0)
 
     print("[Briefing Writer] Generating final report...")

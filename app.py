@@ -229,9 +229,9 @@ with tab1:
         hide_index=True,
     )
 
-    # Summary metrics
+    # Summary metrics (deduplicate by alert_id to avoid inflated counts from re-investigation)
     col1, col2, col3, col4 = st.columns(4)
-    severities = [t.get("severity", "") for t in state.get("triage_results", [])]
+    severities = [t.get("severity", "") for t in triage_by_id.values()]
     with col1:
         st.metric("Total Alerts", len(state["alerts"]))
     with col2:
