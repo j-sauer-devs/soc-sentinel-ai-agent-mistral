@@ -1,10 +1,14 @@
 # SOC Sentinel AI Agent Cluster
 
-> **Mistral AI Hackathon Submission** — Multi-Agent SOC Triage with OWASP Nettacker Recon
+> **Mistral AI Hackathon Submission** — Multi-Agent SOC Triage with OWASP Nettacker Recon + ElevenLabs Voice Briefing
 
-A multi-agent security alert triage system built with [LangGraph](https://github.com/langchain-ai/langgraph), powered by [Mistral AI](https://mistral.ai/) models, and enhanced with [OWASP Nettacker](https://github.com/OWASP/Nettacker) active reconnaissance.
+A multi-agent security alert triage system built with [LangGraph](https://github.com/langchain-ai/langgraph), powered by [Mistral AI](https://mistral.ai/) models, enhanced with [OWASP Nettacker](https://github.com/OWASP/Nettacker) active reconnaissance, and voiced by [ElevenLabs](https://elevenlabs.io/) for hands-free incident response.
 
-SOC Sentinel processes batches of security alerts through **6 specialised AI agents** that triage, enrich, investigate, scan, cross-verify, and report — combining **passive threat intelligence** (6 APIs) with **active reconnaissance** (OWASP Nettacker) for complete alert investigation.
+SOC Sentinel processes batches of security alerts through **7 specialised AI agents** that triage, enrich, investigate, scan, cross-verify, report, and **speak** — combining **passive threat intelligence** (6 APIs) with **active reconnaissance** (OWASP Nettacker) for complete alert investigation.
+
+## Demo
+
+> 📹 **[Watch the demo video](TODO)** — 3-minute walkthrough of SOC Sentinel processing 25 alerts
 
 ## Architecture
 
@@ -64,6 +68,7 @@ If the Oversight Officer's confidence score falls below 70 and fewer than 3 iter
 | [NIST NVD](https://nvd.nist.gov/) | CVE lookups with CVSS scores | Yes |
 | [GreyNoise](https://www.greynoise.io/) | IP noise/benign classification | Optional |
 | [OWASP Nettacker](https://github.com/OWASP/Nettacker) | Active recon: port scanning, vulnerability detection, service identification | Demo mode included |
+| [ElevenLabs](https://elevenlabs.io/) | Text-to-speech voice briefing for hands-free SOC operations | Optional |
 
 ## LLM
 
@@ -81,12 +86,13 @@ If the Oversight Officer's confidence score falls below 70 and fewer than 3 iter
 +-- apis/                    # Security API clients
 |   +-- abuseipdb.py         # IP reputation (confidence 0-100)
 |   +-- greynoise.py         # IP classification (graceful stub)
+|   +-- elevenlabs_tts.py    # ElevenLabs voice briefing TTS
 |   +-- nettacker.py         # OWASP Nettacker wrapper + demo cache
 |   +-- nvd.py               # NVD CVE search with CVSS extraction
 |   +-- otx.py               # OTX pulse lookups (IP + domain)
 |   +-- virustotal.py        # VT v3 analysis (IP + domain)
 +-- demo/                    # Demo dataset
-|   +-- demo_data.py         # 15 alerts + pre-cached Nettacker results
+|   +-- demo_data.py         # 25 alerts + pre-cached Nettacker results
 +-- graph/                   # LangGraph agent system
 |   +-- graph.py             # StateGraph wiring + compilation (4 parallel agents)
 |   +-- nodes.py             # Agent node implementations (6 agents + Mistral)
@@ -134,6 +140,7 @@ OTX_KEY=your_key
 VIRUSTOTAL_KEY=your_key
 NVD_KEY=your_key
 GREYNOISE_KEY=          # optional
+ELEVENLABS_KEY=         # optional — enables voice briefing
 DEMO_MODE=true          # pre-cached Nettacker results for reliable demo
 ```
 
@@ -168,7 +175,7 @@ python3 tests/test_full_pipeline.py
 
 ## The Demo: "The Wow Moment"
 
-SOC Sentinel processes 15 alerts. Most are noise (Google DNS, internal health checks, etc.). But one alert stands out:
+SOC Sentinel processes 25 alerts. Most are noise (Google DNS, internal health checks, container pulls, etc.). But several alerts stand out:
 
 1. **Triage Officer** classifies `45.33.32.156` as **Medium** severity (low AbuseIPDB score)
 2. **Threat Hunter** finds APT29 (Cozy Bear) indicators in OTX pulses
@@ -193,6 +200,8 @@ A second alert (`203.0.113.42`) triggers a `RECON_SEVERITY_MISMATCH` — Triage 
 **Rule-based fallback** — The Oversight node includes deterministic conflict detection alongside the LLM, ensuring the demo reliably catches planted misclassifications even if the model's JSON output fails to parse.
 
 **Parallel fan-out with append-only state** — All four specialists run concurrently. LangGraph's `Annotated[list, operator.add]` fields merge results from parallel branches without conflicts.
+
+**Voice briefing for incident response** — ElevenLabs TTS converts the final security briefing into audio, enabling hands-free SOC operations during active incidents when analysts can't look at screens.
 
 **Graceful degradation** — Missing API keys return stub responses instead of crashing. Demo mode provides pre-cached Nettacker results for reliable offline demos.
 

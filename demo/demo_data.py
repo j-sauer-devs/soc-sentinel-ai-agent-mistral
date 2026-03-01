@@ -1,16 +1,17 @@
 """
 Demo dataset for SOC Sentinel.
 
-Contains 15 pre-built alerts and pre-cached Nettacker results
+Contains 25 pre-built alerts and pre-cached Nettacker results
 for a reliable, compelling demo.
 
 Alert mix:
-  - 10 obvious false positives / noise (benign scanners, internal IPs)
-  - 3 confirmed threats (known malicious IPs)
+  - 14 obvious false positives / noise (benign scanners, internal IPs)
+  - 5 confirmed threats (known malicious IPs)
   - 1 "WOW MOMENT" alert: Triage says Medium, but Nettacker + Threat Hunter
     reveal APT29 C2 infrastructure -> Oversight overrides to Critical
   - 1 Exposed MySQL alert: Triage says Low, Recon reveals high attack surface
     -> Oversight flags RECON_SEVERITY_MISMATCH
+  - 4 additional noise / low-risk to push false positive ratio to ~72%
 """
 
 DEMO_ALERTS = [
@@ -184,5 +185,126 @@ DEMO_ALERTS = [
             "reconnecting. Password correct on all attempts."
         ),
         "timestamp": "2025-01-15T03:56:30Z",
+    },
+    # ---- CONFIRMED THREAT: Phishing URL ----
+    {
+        "id": "ALERT-016",
+        "source_ip": "198.51.100.23",
+        "alert_type": "Phishing URL Detected",
+        "description": (
+            "Email gateway flagged inbound email with link to "
+            "https://login-m1crosoft.com/verify?token=abc123. URL mimics "
+            "Microsoft login page. 3 users clicked before block. Hosted on "
+            "198.51.100.23."
+        ),
+        "timestamp": "2025-01-15T03:58:00Z",
+    },
+    # ---- CONFIRMED THREAT: DNS exfiltration ----
+    {
+        "id": "ALERT-017",
+        "source_ip": "192.0.2.44",
+        "alert_type": "DNS Exfiltration Suspected",
+        "description": (
+            "Endpoint WS-RD-009 sending high-entropy DNS TXT queries to "
+            "192.0.2.44 at rate of 200 queries/minute. Subdomain labels "
+            "contain base64-encoded strings. Potential data exfiltration."
+        ),
+        "timestamp": "2025-01-15T04:00:15Z",
+    },
+    # ---- FALSE POSITIVE: Printer traffic ----
+    {
+        "id": "ALERT-018",
+        "source_ip": "10.0.0.150",
+        "alert_type": "Unusual Internal Traffic",
+        "description": (
+            "Network printer 10.0.0.150 broadcasting mDNS discovery packets "
+            "on port 5353. Normal Bonjour/Avahi service advertisement."
+        ),
+        "timestamp": "2025-01-15T04:02:00Z",
+    },
+    # ---- FALSE POSITIVE: SCCM software deployment ----
+    {
+        "id": "ALERT-019",
+        "source_ip": "10.0.0.5",
+        "alert_type": "Large Data Transfer",
+        "description": (
+            "SCCM distribution point 10.0.0.5 pushing 4.2 GB software "
+            "package to 35 workstations. Matches scheduled deployment "
+            "window. Authorised by IT ops team."
+        ),
+        "timestamp": "2025-01-15T04:04:30Z",
+    },
+    # ---- FALSE POSITIVE: Load balancer health probe ----
+    {
+        "id": "ALERT-020",
+        "source_ip": "10.0.0.250",
+        "alert_type": "Repeated Connection Attempts",
+        "description": (
+            "AWS ALB health checker 10.0.0.250 sending HTTP GET /health to "
+            "12 backend instances every 10 seconds. Expected behaviour for "
+            "auto-scaling group."
+        ),
+        "timestamp": "2025-01-15T04:06:00Z",
+    },
+    # ---- FALSE POSITIVE: Certificate renewal ----
+    {
+        "id": "ALERT-021",
+        "source_ip": "10.0.0.15",
+        "alert_type": "Outbound Connection to Unknown Host",
+        "description": (
+            "Web server 10.0.0.15 contacting Let's Encrypt ACME endpoint "
+            "at acme-v02.api.letsencrypt.org for automated certificate "
+            "renewal. Standard certbot operation."
+        ),
+        "timestamp": "2025-01-15T04:08:22Z",
+    },
+    # ---- FALSE POSITIVE: Container registry pull ----
+    {
+        "id": "ALERT-022",
+        "source_ip": "10.0.0.60",
+        "alert_type": "High Bandwidth Usage",
+        "description": (
+            "Kubernetes node 10.0.0.60 pulling container images from "
+            "ghcr.io during scheduled deployment. 1.8 GB transfer over "
+            "5 minutes. Normal CI/CD pipeline activity."
+        ),
+        "timestamp": "2025-01-15T04:10:00Z",
+    },
+    # ---- FALSE POSITIVE: Monitoring agent ----
+    {
+        "id": "ALERT-023",
+        "source_ip": "10.0.0.99",
+        "alert_type": "Repeated Outbound Connection",
+        "description": (
+            "Datadog agent on 10.0.0.99 sending metrics to "
+            "app.datadoghq.com every 15 seconds. Standard APM telemetry. "
+            "Authorised monitoring service."
+        ),
+        "timestamp": "2025-01-15T04:12:30Z",
+    },
+    # ---- FALSE POSITIVE: Slack webhook ----
+    {
+        "id": "ALERT-024",
+        "source_ip": "10.0.0.42",
+        "alert_type": "Outbound Connection to Unknown Host",
+        "description": (
+            "Alert bot on 10.0.0.42 posting to hooks.slack.com webhook "
+            "URL. Triggered by infrastructure alert. Normal notification "
+            "pipeline behaviour."
+        ),
+        "timestamp": "2025-01-15T04:14:00Z",
+    },
+    # ---- CONFIRMED THREAT: Lateral movement ----
+    {
+        "id": "ALERT-025",
+        "source_ip": "10.0.0.88",
+        "alert_type": "Lateral Movement Detected",
+        "description": (
+            "Host WS-DEV-017 (10.0.0.88) performing SMB enumeration "
+            "against 10.0.0.1, 10.0.0.5, 10.0.0.10 using admin$ share. "
+            "Same host flagged in ALERT-005 for malware download. "
+            "Possible post-exploitation lateral movement."
+        ),
+        "timestamp": "2025-01-15T04:16:45Z",
     },
 ]

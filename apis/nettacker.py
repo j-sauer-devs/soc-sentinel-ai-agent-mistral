@@ -174,6 +174,36 @@ DEMO_NETTACKER_CACHE = {
         "attack_surface_score": 68,
         "scan_duration_seconds": 9.4,
     },
+    # Phishing host
+    "198.51.100.23": {
+        "target": "198.51.100.23",
+        "scan_modules": ["port_scan", "http_status_scan"],
+        "results": {
+            "open_ports": [80, 443, 8080],
+            "services": {"80": "nginx 1.18", "443": "nginx 1.18 (fake Microsoft login)", "8080": "phishing kit admin panel"},
+            "vulnerabilities": [
+                {"type": "phishing_infrastructure", "severity": "critical", "detail": "Hosts fake Microsoft login page with credential harvester"},
+                {"type": "open_admin_panel", "severity": "high", "detail": "Phishing kit admin panel exposed on port 8080"},
+            ],
+        },
+        "attack_surface_score": 75,
+        "scan_duration_seconds": 3.2,
+    },
+    # DNS exfiltration endpoint
+    "192.0.2.44": {
+        "target": "192.0.2.44",
+        "scan_modules": ["port_scan", "http_status_scan"],
+        "results": {
+            "open_ports": [53, 443, 8443],
+            "services": {"53": "custom DNS server", "443": "https", "8443": "unknown (C2 suspected)"},
+            "vulnerabilities": [
+                {"type": "dns_tunneling", "severity": "critical", "detail": "DNS server accepting unusually large TXT record queries — data exfiltration suspected"},
+                {"type": "c2_port", "severity": "high", "detail": "Port 8443 running unidentified service, potential C2 channel"},
+            ],
+        },
+        "attack_surface_score": 78,
+        "scan_duration_seconds": 4.1,
+    },
 }
 
 
