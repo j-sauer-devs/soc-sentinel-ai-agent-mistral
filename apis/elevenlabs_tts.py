@@ -58,31 +58,103 @@ def generate_briefing_audio(text: str, voice_id: str = None) -> bytes | None:
         return None
 
 
-def prepare_briefing_for_speech(briefing: str) -> str:
-    """Clean up the briefing text for better TTS pronunciation.
+def build_executive_summary(state: dict) -> str:
+    """Build a concise ~150-word executive summary from pipeline state.
 
-    - Strips ASCII art headers
-    - Expands abbreviations
-    - Formats IP addresses for natural reading
+    Designed for ~1 minute of spoken audio at natural speech pace.
+    Takes the structured state dict (not raw briefing text) so we can
+    cherry-pick only the most critical findings.
     """
-    import re
+    verdict = state.get("oversight_verdict", {})
+    confidence = state.get("confidence", 0.0)
+    alerts = state.get("alerts", [])
+    triage = state.get("triage_results", [])
+    recon = state.get("recon_results", [])
+    conflicts = verdict.get("conflicts", [])
 
-    # Remove ASCII decoration lines
-    text = re.sub(r"[=\-]{10,}", "", briefing)
+    # --- Severity counts ---
+    severities = [r.get("severity", "") for r in triage]
+    sev_parts = []
+    for sev in ["Critical", "High", "Medium", "Low"]:
+        count = severities.count(sev)
+        if count > 0:
+            sev_parts.append(f"{count} {sev.lower()}")
 
-    # Remove "SOC SENTINEL" header lines
-    text = re.sub(r"SOC SENTINEL.*\n", "", text)
-    text = re.sub(r"Powered by.*\n", "", text)
+    # --- Top conflicts (max 3, deduped by alert_id, prioritised) ---
+    priority_order = ["SEVERITY_CONFLICT", "RECON_SEVERITY_MISMATCH",
+                      "HALLUCINATED_CVE_IDS", "CORROBORATING_EVIDENCE"]
+    sorted_conflicts = sorted(
+        [c for c in conflicts if isinstance(c, dict)],
+        key=lambda c: (
+            priority_order.index(c.get("conflict_type", ""))
+            if c.get("conflict_type", "") in priority_order else 99
+        ),
+    )
+    # Deduplicate by alert_id — keep the highest priority conflict per alert
+    seen_alerts = set()
+    top_conflicts = []
+    for c in sorted_conflicts:
+        aid = c.get("alert_id", "")
+        if aid not in seen_alerts:
+            seen_alerts.add(aid)
+            top_conflicts.append(c)
+        if len(top_conflicts) >= 3:
+            break
 
-    # Expand common SOC abbreviations for natural speech
-    text = text.replace("CVE-", "C V E ")
-    text = text.replace("APT", "A P T")
-    text = text.replace("C2", "command and control")
-    text = text.replace("IOC", "indicator of compromise")
-    text = text.replace("TTP", "tactics techniques and procedures")
-    text = text.replace("MITRE ATT&CK", "MITRE attack framework")
+    # --- High-risk recon targets (score > 70) ---
+    high_risk = [r for r in recon if r.get("attack_surface_score", 0) > 70]
 
-    # Clean up multiple newlines
-    text = re.sub(r"\n{3,}", "\n\n", text)
+    # --- APT indicators ---
+    apt_indicators = verdict.get("apt_indicators", [])
 
-    return text.strip()
+    # --- Build the spoken script ---
+    lines = ["SOC Sentinel security briefing."]
+
+    lines.append(
+        f"{len(alerts)} alerts processed. "
+        f"Overall verdict: {verdict.get('verdict', 'unknown')}. "
+        f"Confidence: {confidence:.0f} out of 100."
+    )
+
+    if sev_parts:
+        lines.append(f"Severity breakdown: {', '.join(sev_parts)}.")
+
+    if top_conflicts:
+        lines.append(
+            f"The Oversight Officer flagged {len(conflicts)} "
+            f"verification conflict{'s' if len(conflicts) != 1 else ''}."
+        )
+        for c in top_conflicts:
+            alert_id = c.get("alert_id", "unknown")
+            ctype = c.get("conflict_type", "").replace("_", " ").lower()
+            # Build a short description — take first sentence only
+            desc = c.get("description", "")
+            short_desc = desc.split(".")[0] if desc else ctype
+            lines.append(f"Alert {alert_id}: {short_desc}.")
+
+    if apt_indicators:
+        # Expand APT for speech
+        apt_text = ", ".join(str(a) for a in apt_indicators[:2])
+        apt_text = apt_text.replace("APT", "A P T")
+        apt_text = apt_text.replace("C2", "command and control")
+        lines.append(f"Warning: {apt_text}.")
+
+    if high_risk:
+        lines.append(
+            f"Reconnaissance identified {len(high_risk)} high-risk "
+            f"target{'s' if len(high_risk) != 1 else ''} "
+            f"with attack surface scores above 70."
+        )
+
+    # Assessment — use the verdict's reasoning summary (already concise)
+    reasoning = verdict.get("reasoning_summary", "")
+    if reasoning and reasoning != "N/A":
+        # Expand abbreviations for speech
+        reasoning = reasoning.replace("APT", "A P T")
+        reasoning = reasoning.replace("C2", "command and control")
+        reasoning = reasoning.replace("CVE-", "C V E ")
+        lines.append(f"Assessment: {reasoning}")
+
+    lines.append("End of briefing.")
+
+    return "\n\n".join(lines)

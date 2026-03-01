@@ -635,8 +635,8 @@ with tab4:
     elif st.button("🎙️ Generate Voice Briefing", type="primary"):
         with st.spinner("🔊 Generating voice briefing with ElevenLabs..."):
             try:
-                from apis.elevenlabs_tts import generate_briefing_audio, prepare_briefing_for_speech
-                speech_text = prepare_briefing_for_speech(briefing)
+                from apis.elevenlabs_tts import generate_briefing_audio, build_executive_summary
+                speech_text = build_executive_summary(state)
                 audio_bytes = generate_briefing_audio(speech_text)
                 if audio_bytes:
                     st.session_state["voice_audio"] = audio_bytes
