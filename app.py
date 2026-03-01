@@ -8,7 +8,6 @@ Usage:
     streamlit run app.py
 """
 
-import json
 import os
 import re
 import time
@@ -70,56 +69,62 @@ def render_agent_graph(phase: str, agent_statuses: dict = None,
 
     # --- Colour palette per phase ---
     if phase == "idle":
-        node_fill     = "#1a1a2e"
-        node_stroke   = "#4a4a6a"
-        conn_stroke   = "#3a3a5a"
+        node_fill     = "#16182d"
+        node_stroke   = "#3d4065"
+        conn_stroke   = "#2d305a"
         label_color   = "#8888aa"
+        subtitle_color = "#5d5f8a"
         dash          = "6,4"
         glow          = "none"
+        bg_color      = "#0d0f1a"
     elif phase == "running":
         node_fill     = "#1e1a10"
         node_stroke   = "#f59e0b"
         conn_stroke   = "#f59e0b"
         label_color   = "#fbbf24"
+        subtitle_color = "#d97706"
         dash          = "6,4"
         glow          = "url(#glowAmber)"
+        bg_color      = "#0d0f1a"
     else:  # completed
         node_fill     = "#0f1f15"
         node_stroke   = "#22c55e"
         conn_stroke   = "#22c55e"
         label_color   = "#4ade80"
+        subtitle_color = "#16a34a"
         dash          = "none"
         glow          = "url(#glowGreen)"
+        bg_color      = "#0d0f1a"
 
-    # --- Node metadata ---
+    # --- Node metadata: (id, label, subtitle, icon_char, cx, cy) ---
     nodes = [
-        ("commander",     "Commander",         "Entry Point",       350, 50),
-        ("triage",        "Triage Officer",    "IP Reputation",     100, 185),
-        ("threat_hunter", "Threat Hunter",     "IOC Enrichment",    280, 185),
-        ("forensics",     "Forensics Analyst", "CVE Analysis",      460, 185),
-        ("recon",         "Recon Specialist",  "Nettacker Scan",    640, 185),
-        ("oversight",     "Oversight Officer", "Cross-Verification",350, 320),
-        ("briefing",      "Briefing Writer",   "Final Report",      350, 425),
+        ("commander",     "Commander",         "Entry Point",        "⌘",  350, 55),
+        ("triage",        "Triage Officer",    "IP Reputation",      "🎯", 100, 195),
+        ("threat_hunter", "Threat Hunter",     "IOC Enrichment",     "🔍", 280, 195),
+        ("forensics",     "Forensics Analyst", "CVE Analysis",       "🧬", 460, 195),
+        ("recon",         "Recon Specialist",  "Nettacker Scan",     "📡", 640, 195),
+        ("oversight",     "Oversight Officer", "Cross-Verification", "⚖️",  350, 330),
+        ("briefing",      "Briefing Writer",   "Final Report",       "📄", 350, 440),
     ]
 
     # --- Build connection paths (id, d-attribute) ---
     connections = [
         # Commander fan-out
-        ("c-cmd-tri",  "M 350 75  Q 225 130 100 165"),
-        ("c-cmd-thr",  "M 350 75  Q 315 130 280 165"),
-        ("c-cmd-for",  "M 350 75  Q 405 130 460 165"),
-        ("c-cmd-rec",  "M 350 75  Q 495 130 640 165"),
+        ("c-cmd-tri",  "M 350 80  Q 225 140 100 175"),
+        ("c-cmd-thr",  "M 350 80  Q 315 140 280 175"),
+        ("c-cmd-for",  "M 350 80  Q 405 140 460 175"),
+        ("c-cmd-rec",  "M 350 80  Q 495 140 640 175"),
         # Convergence to oversight
-        ("c-tri-ovs",  "M 100 210 Q 225 270 350 300"),
-        ("c-thr-ovs",  "M 280 210 Q 315 270 350 300"),
-        ("c-for-ovs",  "M 460 210 Q 405 270 350 300"),
-        ("c-rec-ovs",  "M 640 210 Q 495 270 350 300"),
+        ("c-tri-ovs",  "M 100 220 Q 225 280 350 310"),
+        ("c-thr-ovs",  "M 280 220 Q 315 280 350 310"),
+        ("c-for-ovs",  "M 460 220 Q 405 280 350 310"),
+        ("c-rec-ovs",  "M 640 220 Q 495 280 350 310"),
         # Oversight to briefing
-        ("c-ovs-brf",  "M 350 345 L 350 405"),
+        ("c-ovs-brf",  "M 350 355 L 350 420"),
     ]
 
     # Loop-back path (Oversight -> Commander, right side)
-    loop_path = "M 430 320 Q 720 320 720 50 Q 720 20 430 50"
+    loop_path = "M 430 330 Q 730 330 730 55 Q 730 20 430 55"
 
     # --- Build per-node color overrides for completed state ---
     def node_colors(nid):
@@ -127,7 +132,7 @@ def render_agent_graph(phase: str, agent_statuses: dict = None,
             s = agent_statuses.get(nid, {})
             if s.get("status") == "completed":
                 return "#0f1f15", "#22c55e", "url(#glowGreen)"
-            return "#1a1a2e", "#4a4a6a", "none"
+            return "#16182d", "#3d4065", "none"
         return node_fill, node_stroke, glow
 
     # --- Detail badge text for completed nodes ---
@@ -137,9 +142,9 @@ def render_agent_graph(phase: str, agent_statuses: dict = None,
         return agent_statuses.get(nid, {}).get("detail", "")
 
     # --- Build SVG nodes ---
-    node_w, node_h, rx = 140, 48, 10
+    node_w, node_h, rx = 146, 50, 12
     svg_nodes = ""
-    for nid, label, subtitle, cx, cy in nodes:
+    for nid, label, subtitle, icon, cx, cy in nodes:
         nf, ns, ng = node_colors(nid)
         x = cx - node_w // 2
         y = cy - node_h // 2
@@ -149,9 +154,9 @@ def render_agent_graph(phase: str, agent_statuses: dict = None,
         badge = ""
         if nid == "oversight" and phase == "completed" and conflict_count > 0:
             badge = f'''
-            <circle cx="{cx + node_w//2 - 5}" cy="{cy - node_h//2 + 5}" r="12"
-                    fill="#ef4444" stroke="#1a1a2e" stroke-width="2">
-                <animate attributeName="opacity" values="1;0.5;1" dur="1.5s" repeatCount="indefinite"/>
+            <circle cx="{cx + node_w//2 - 5}" cy="{cy - node_h//2 + 5}" r="13"
+                    fill="#ef4444" stroke="{bg_color}" stroke-width="2.5">
+                <animate attributeName="opacity" values="1;0.6;1" dur="2s" repeatCount="indefinite"/>
             </circle>
             <text x="{cx + node_w//2 - 5}" y="{cy - node_h//2 + 9}"
                   text-anchor="middle" fill="white" font-size="10" font-weight="bold">{conflict_count}</text>
@@ -160,9 +165,12 @@ def render_agent_graph(phase: str, agent_statuses: dict = None,
         # Confidence badge for oversight
         conf_badge = ""
         if nid == "oversight" and phase == "completed" and confidence > 0:
+            conf_color = "#22c55e" if confidence >= 70 else "#f59e0b" if confidence >= 40 else "#ef4444"
             conf_badge = f'''
-            <text x="{cx}" y="{cy + node_h//2 + 35}"
-                  text-anchor="middle" fill="{label_color}" font-size="11"
+            <rect x="{cx - 28}" y="{cy + node_h//2 + 28}" width="56" height="20" rx="10"
+                  fill="{bg_color}" stroke="{conf_color}" stroke-width="1.5"/>
+            <text x="{cx}" y="{cy + node_h//2 + 42}"
+                  text-anchor="middle" fill="{conf_color}" font-size="11"
                   font-family="monospace" font-weight="bold">{confidence:.0f}/100</text>
             '''
 
@@ -171,11 +179,21 @@ def render_agent_graph(phase: str, agent_statuses: dict = None,
         if detail:
             detail_label = f'''
             <text x="{cx}" y="{cy + node_h//2 + 16}"
-                  text-anchor="middle" fill="{label_color}" font-size="9.5"
-                  font-family="monospace">{detail}</text>
+                  text-anchor="middle" fill="{label_color}" font-size="9"
+                  font-family="monospace" opacity="0.9">{detail}</text>
             '''
 
         anim_class = f'class="node-pulse"' if phase == "running" else ""
+
+        # Checkmark for completed nodes
+        checkmark = ""
+        if phase == "completed" and agent_statuses.get(nid, {}).get("status") == "completed":
+            checkmark = f'''
+            <circle cx="{cx - node_w//2 + 8}" cy="{cy - node_h//2 + 8}" r="7"
+                    fill="#22c55e" stroke="{bg_color}" stroke-width="1.5"/>
+            <text x="{cx - node_w//2 + 8}" y="{cy - node_h//2 + 12}"
+                  text-anchor="middle" fill="white" font-size="9" font-weight="bold">✓</text>
+            '''
 
         svg_nodes += f'''
         <g {anim_class}>
@@ -183,12 +201,13 @@ def render_agent_graph(phase: str, agent_statuses: dict = None,
                   fill="{nf}" stroke="{ns}" stroke-width="2"
                   filter="{ng}"/>
             <text x="{cx}" y="{cy - 3}" text-anchor="middle"
-                  fill="#e0e0e0" font-size="12.5" font-weight="bold"
+                  fill="#e8e8f0" font-size="12.5" font-weight="bold"
                   font-family="'Segoe UI', system-ui, sans-serif">{label}</text>
-            <text x="{cx}" y="{cy + 12}" text-anchor="middle"
-                  fill="#7a7a9a" font-size="9.5"
+            <text x="{cx}" y="{cy + 13}" text-anchor="middle"
+                  fill="{subtitle_color}" font-size="9"
                   font-family="'Segoe UI', system-ui, sans-serif">{subtitle}</text>
             {badge}
+            {checkmark}
             {detail_label}
             {conf_badge}
         </g>
@@ -201,27 +220,23 @@ def render_agent_graph(phase: str, agent_statuses: dict = None,
         <path id="{cid}" d="{d}" fill="none"
               stroke="{conn_stroke}" stroke-width="1.8"
               stroke-dasharray="{dash}" marker-end="url(#arrow)"
-              opacity="0.7"/>
+              opacity="0.6"/>
         '''
 
     # --- Loop-back arrow ---
-    loop_opacity = "0.35"
+    loop_opacity = "0.3"
     loop_dash = "6,4"
-    loop_color = "#6366f1"
+    loop_color = "#818cf8"
     if phase == "completed":
-        iteration = 1  # default
-        if agent_statuses:
-            # check if re-investigation happened
-            log_check = agent_statuses.get("commander", {}).get("detail", "")
         loop_opacity = "0.5"
     svg_conns += f'''
     <path id="c-loop" d="{loop_path}" fill="none"
           stroke="{loop_color}" stroke-width="1.5"
           stroke-dasharray="{loop_dash}" marker-end="url(#arrowLoop)"
           opacity="{loop_opacity}"/>
-    <text font-size="8.5" fill="{loop_color}" font-family="monospace" opacity="0.7">
+    <text font-size="8.5" fill="{loop_color}" font-family="monospace" opacity="0.6">
         <textPath href="#c-loop" startOffset="35%" text-anchor="middle">
-            confidence &lt; 70
+            confidence &lt; 70 → re-investigate
         </textPath>
     </text>
     '''
@@ -230,39 +245,83 @@ def render_agent_graph(phase: str, agent_statuses: dict = None,
     svg_particles = ""
     if phase == "running":
         particle_color = "#f59e0b"
-        for cid, _ in connections:
+        particle_glow = "#fbbf24"
+        durations = ["1.5s", "1.8s", "2.0s", "1.6s", "1.7s", "1.9s", "2.1s", "1.4s", "1.3s"]
+        for i, (cid, _) in enumerate(connections):
+            dur = durations[i % len(durations)]
+            # Primary particle
             svg_particles += f'''
-            <circle r="3" fill="{particle_color}" opacity="0.9">
-                <animateMotion dur="1.8s" repeatCount="indefinite">
+            <circle r="3.5" fill="{particle_color}" opacity="0.95">
+                <animateMotion dur="{dur}" repeatCount="indefinite">
                     <mpath href="#{cid}"/>
                 </animateMotion>
             </circle>
             '''
+            # Trailing glow particle
+            svg_particles += f'''
+            <circle r="6" fill="{particle_glow}" opacity="0.2">
+                <animateMotion dur="{dur}" repeatCount="indefinite">
+                    <mpath href="#{cid}"/>
+                </animateMotion>
+            </circle>
+            '''
+        # Loop-back particle (slower, purple)
+        svg_particles += f'''
+        <circle r="3" fill="{loop_color}" opacity="0.8">
+            <animateMotion dur="3s" repeatCount="indefinite">
+                <mpath href="#c-loop"/>
+            </animateMotion>
+        </circle>
+        '''
+
+    # --- Status text at the bottom ---
+    status_text = ""
+    if phase == "idle":
+        status_text = f'''
+        <text x="380" y="475" text-anchor="middle" fill="#4a4c7a" font-size="11"
+              font-family="monospace">Ready — click Run Pipeline to begin</text>
+        '''
+    elif phase == "running":
+        status_text = f'''
+        <text x="380" y="475" text-anchor="middle" fill="#f59e0b" font-size="11"
+              font-family="monospace" class="node-pulse">
+            ● Processing alerts through 7-agent pipeline...
+        </text>
+        '''
+    elif phase == "completed":
+        v = agent_statuses.get("oversight", {}).get("detail", "")
+        status_text = f'''
+        <text x="380" y="475" text-anchor="middle" fill="#22c55e" font-size="11"
+              font-family="monospace">✓ Pipeline complete — {v}</text>
+        '''
 
     # --- Assemble full HTML ---
     html = f'''
     <html><body style="margin:0; padding:0; background:transparent; overflow:hidden;">
-    <div style="display:flex; justify-content:center; padding: 10px 0;">
-    <svg viewBox="0 0 760 480" width="100%" height="480"
+    <div style="display:flex; justify-content:center; padding: 8px 0;">
+    <svg viewBox="0 0 760 490" width="100%" height="490"
          preserveAspectRatio="xMidYMid meet"
          xmlns="http://www.w3.org/2000/svg"
-         style="max-width: 900px; font-family: 'Segoe UI', system-ui, sans-serif;">
+         style="max-width: 920px; font-family: 'Segoe UI', system-ui, sans-serif;">
+
+        <!-- Background -->
+        <rect width="760" height="490" rx="16" fill="{bg_color}" opacity="0.6"/>
 
         <defs>
             <!-- Arrow markers -->
             <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5"
                     markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="{conn_stroke}" opacity="0.8"/>
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="{conn_stroke}" opacity="0.7"/>
             </marker>
             <marker id="arrowLoop" viewBox="0 0 10 10" refX="10" refY="5"
                     markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="{loop_color}" opacity="0.7"/>
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="{loop_color}" opacity="0.6"/>
             </marker>
 
             <!-- Glow filters -->
             <filter id="glowAmber" x="-30%" y="-30%" width="160%" height="160%">
                 <feGaussianBlur stdDeviation="6" result="blur"/>
-                <feFlood flood-color="#f59e0b" flood-opacity="0.4"/>
+                <feFlood flood-color="#f59e0b" flood-opacity="0.35"/>
                 <feComposite in2="blur" operator="in"/>
                 <feMerge>
                     <feMergeNode/>
@@ -271,7 +330,16 @@ def render_agent_graph(phase: str, agent_statuses: dict = None,
             </filter>
             <filter id="glowGreen" x="-30%" y="-30%" width="160%" height="160%">
                 <feGaussianBlur stdDeviation="5" result="blur"/>
-                <feFlood flood-color="#22c55e" flood-opacity="0.35"/>
+                <feFlood flood-color="#22c55e" flood-opacity="0.3"/>
+                <feComposite in2="blur" operator="in"/>
+                <feMerge>
+                    <feMergeNode/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+            <filter id="glowCyan" x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="4" result="blur"/>
+                <feFlood flood-color="#06b6d4" flood-opacity="0.3"/>
                 <feComposite in2="blur" operator="in"/>
                 <feMerge>
                     <feMergeNode/>
@@ -282,17 +350,39 @@ def render_agent_graph(phase: str, agent_statuses: dict = None,
 
         <style>
             @keyframes pulse {{
-                0%, 100% {{ opacity: 0.85; }}
+                0%, 100% {{ opacity: 0.8; }}
                 50% {{ opacity: 1; }}
             }}
-            @keyframes dashFlow {{
+            @keyframes glow-pulse {{
+                0%, 100% {{ filter: brightness(1); }}
+                50% {{ filter: brightness(1.3); }}
+            }}
+            @keyframes dash-march {{
                 0% {{ stroke-dashoffset: 20; }}
                 100% {{ stroke-dashoffset: 0; }}
             }}
             .node-pulse {{
-                animation: pulse 1.8s ease-in-out infinite;
+                animation: pulse 2s ease-in-out infinite;
+            }}
+            .conn-flow {{
+                animation: dash-march 1s linear infinite;
             }}
         </style>
+
+        <!-- Tier separator lines -->
+        <line x1="40" y1="125" x2="720" y2="125" stroke="#1a1c35" stroke-width="1" opacity="0.5"/>
+        <line x1="40" y1="270" x2="720" y2="270" stroke="#1a1c35" stroke-width="1" opacity="0.5"/>
+        <line x1="40" y1="395" x2="720" y2="395" stroke="#1a1c35" stroke-width="1" opacity="0.5"/>
+
+        <!-- Tier labels -->
+        <text x="30" y="55" fill="#3d4065" font-size="8" font-family="monospace"
+              transform="rotate(-90, 30, 55)" letter-spacing="2">ENTRY</text>
+        <text x="30" y="210" fill="#3d4065" font-size="8" font-family="monospace"
+              transform="rotate(-90, 30, 210)" letter-spacing="2">SPECIALISTS</text>
+        <text x="30" y="345" fill="#3d4065" font-size="8" font-family="monospace"
+              transform="rotate(-90, 30, 345)" letter-spacing="2">VERIFY</text>
+        <text x="30" y="445" fill="#3d4065" font-size="8" font-family="monospace"
+              transform="rotate(-90, 30, 445)" letter-spacing="2">REPORT</text>
 
         <!-- Connections (drawn first, behind nodes) -->
         {svg_conns}
@@ -300,16 +390,11 @@ def render_agent_graph(phase: str, agent_statuses: dict = None,
         <!-- Animated particles -->
         {svg_particles}
 
-        <!-- Tier labels -->
-        <text x="18" y="55" fill="#555577" font-size="9" font-family="monospace"
-              transform="rotate(-90, 18, 55)">ENTRY</text>
-        <text x="18" y="195" fill="#555577" font-size="9" font-family="monospace"
-              transform="rotate(-90, 18, 195)">SPECIALISTS</text>
-        <text x="18" y="370" fill="#555577" font-size="9" font-family="monospace"
-              transform="rotate(-90, 18, 370)">OVERSIGHT</text>
-
         <!-- Nodes -->
         {svg_nodes}
+
+        <!-- Status -->
+        {status_text}
 
     </svg>
     </div>
@@ -328,6 +413,130 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# ---------------------------------------------------------------------------
+# Custom CSS for a polished SOC-themed UI
+# ---------------------------------------------------------------------------
+
+st.markdown("""
+<style>
+    /* Dark SOC theme refinements */
+    .stApp {
+        background: linear-gradient(180deg, #0a0c18 0%, #0d1025 100%);
+    }
+
+    /* Header styling */
+    .main-title {
+        background: linear-gradient(135deg, #1a1f3a 0%, #0f1328 100%);
+        border: 1px solid #2a2f55;
+        border-radius: 12px;
+        padding: 20px 28px;
+        margin-bottom: 20px;
+    }
+    .main-title h1 {
+        margin: 0 0 4px 0;
+        font-size: 1.8rem;
+        background: linear-gradient(90deg, #60a5fa, #a78bfa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .main-title p {
+        margin: 0;
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+
+    /* Metric cards */
+    [data-testid="stMetric"] {
+        background: linear-gradient(135deg, #151830 0%, #0f1225 100%);
+        border: 1px solid #252850;
+        border-radius: 10px;
+        padding: 12px 16px;
+    }
+    [data-testid="stMetric"] label {
+        color: #8b8fa8 !important;
+        font-size: 0.8rem !important;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    [data-testid="stMetric"] [data-testid="stMetricValue"] {
+        color: #e0e4f0 !important;
+        font-size: 1.6rem !important;
+    }
+
+    /* Sidebar polish */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0e1028 0%, #080a18 100%);
+        border-right: 1px solid #1a1d38;
+    }
+
+    /* Tab styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 4px;
+        background: #0d0f22;
+        padding: 4px;
+        border-radius: 10px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 8px;
+        padding: 8px 16px;
+        color: #7a7f9a;
+    }
+    .stTabs [aria-selected="true"] {
+        background: #1a1f3a !important;
+        color: #a78bfa !important;
+    }
+
+    /* Dataframe styling */
+    .stDataFrame {
+        border: 1px solid #1f2345;
+        border-radius: 10px;
+    }
+
+    /* Expander styling */
+    .streamlit-expanderHeader {
+        background: #12152a !important;
+        border-radius: 8px;
+    }
+
+    /* Progress bar theming */
+    .stProgress > div > div {
+        background-color: #1a1d38 !important;
+    }
+
+    /* Code block styling */
+    .stCodeBlock {
+        border: 1px solid #1f2345;
+        border-radius: 8px;
+    }
+
+    /* Running status banner */
+    .running-banner {
+        background: linear-gradient(135deg, #1a1510 0%, #1e1608 100%);
+        border: 1px solid #f59e0b40;
+        border-radius: 10px;
+        padding: 12px 20px;
+        text-align: center;
+        margin-bottom: 12px;
+        animation: banner-pulse 2s ease-in-out infinite;
+    }
+    @keyframes banner-pulse {
+        0%, 100% { border-color: #f59e0b40; }
+        50% { border-color: #f59e0b80; }
+    }
+    .running-banner .status-text {
+        color: #fbbf24;
+        font-family: monospace;
+        font-size: 0.95rem;
+    }
+    .running-banner .elapsed-text {
+        color: #92702a;
+        font-family: monospace;
+        font-size: 0.8rem;
+        margin-top: 4px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # ---------------------------------------------------------------------------
 # Sidebar
@@ -361,7 +570,12 @@ with st.sidebar:
         st.caption(f"Confidence: {fs.get('confidence', 0):.0f}/100")
         n_conflicts = len(fs.get("oversight_verdict", {}).get("conflicts", []))
         if n_conflicts > 0:
-            st.caption(f"Conflicts: {n_conflicts}")
+            st.caption(f"⚠️ Conflicts: {n_conflicts}")
+
+    st.divider()
+    st.caption("Mistral Small → speed agents")
+    st.caption("Mistral Large → reasoning agents")
+    st.caption(f"Demo alerts: {len(DEMO_ALERTS)}")
 
 # ---------------------------------------------------------------------------
 # Run pipeline if triggered
@@ -381,26 +595,43 @@ if st.session_state.get("run_pipeline") and "final_state" not in st.session_stat
         "iteration_count": 0,
     }
 
+    # Show the animated running architecture diagram
+    st.markdown(
+        '<div class="main-title"><h1>🛡️ SOC Sentinel AI Agent Cluster</h1>'
+        '<p>Multi-Agent SOC Triage with OWASP Nettacker Recon — Powered by Mistral AI</p></div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div class="running-banner">'
+        '<div class="status-text">● Processing {0} alerts through 7-agent pipeline...</div>'
+        '<div class="elapsed-text">Commander → Triage + Threat Hunter + Forensics + Recon → Oversight → Briefing</div>'
+        '</div>'.format(len(DEMO_ALERTS)),
+        unsafe_allow_html=True,
+    )
+
+    # Display the animated running-state architecture diagram
+    components.html(render_agent_graph("running"), height=520, scrolling=False)
+
     # Capture stdout for agent activity log
     log_buffer = StringIO()
-    with st.spinner("🔄 Running 7-agent pipeline... This may take 30-90 seconds."):
-        start_time = time.time()
-        try:
-            with redirect_stdout(log_buffer):
-                final_state = app.invoke(initial_state)
-            elapsed = time.time() - start_time
+    start_time = time.time()
+    try:
+        with redirect_stdout(log_buffer):
+            final_state = app.invoke(initial_state)
+        elapsed = time.time() - start_time
 
-            st.session_state["final_state"] = final_state
-            st.session_state["elapsed"] = elapsed
-            st.session_state["agent_log"] = log_buffer.getvalue()
-            st.session_state["run_pipeline"] = False
-            st.rerun()
-        except Exception as e:
-            elapsed = time.time() - start_time
-            st.session_state["agent_log"] = log_buffer.getvalue()
-            st.session_state["run_pipeline"] = False
-            st.error(f"Pipeline error after {elapsed:.1f}s: {e}")
-            st.code(log_buffer.getvalue(), language="text")
+        st.session_state["final_state"] = final_state
+        st.session_state["elapsed"] = elapsed
+        st.session_state["agent_log"] = log_buffer.getvalue()
+        st.session_state["run_pipeline"] = False
+        st.rerun()
+    except Exception as e:
+        elapsed = time.time() - start_time
+        st.session_state["agent_log"] = log_buffer.getvalue()
+        st.session_state["run_pipeline"] = False
+        st.error(f"Pipeline error after {elapsed:.1f}s: {e}")
+        st.code(log_buffer.getvalue(), language="text")
+    st.stop()
 
 # ---------------------------------------------------------------------------
 # Verification alert banner
@@ -444,8 +675,11 @@ if "final_state" in st.session_state:
 # Main content
 # ---------------------------------------------------------------------------
 
-st.title("🛡️ SOC Sentinel AI Agent Cluster")
-st.caption("Multi-Agent SOC Triage with OWASP Nettacker Recon — Powered by Mistral AI")
+st.markdown(
+    '<div class="main-title"><h1>🛡️ SOC Sentinel AI Agent Cluster</h1>'
+    '<p>Multi-Agent SOC Triage with OWASP Nettacker Recon — Powered by Mistral AI</p></div>',
+    unsafe_allow_html=True,
+)
 
 if "final_state" not in st.session_state:
     # Show architecture diagram in idle state
@@ -459,6 +693,33 @@ state = st.session_state["final_state"]
 # Tabs
 # ---------------------------------------------------------------------------
 
+# --- Summary metrics row at top ---
+log = st.session_state.get("agent_log", "")
+agent_statuses = parse_agent_log(log)
+n_conflicts = len(state.get("oversight_verdict", {}).get("conflicts", []))
+conf = state.get("confidence", 0.0)
+
+triage_by_id = {r["alert_id"]: r for r in state.get("triage_results", [])}
+enrich_by_id = {r["alert_id"]: r for r in state.get("enrichment_results", [])}
+recon_by_id = {r["alert_id"]: r for r in state.get("recon_results", [])}
+severities = [t.get("severity", "") for t in triage_by_id.values()]
+
+col1, col2, col3, col4, col5 = st.columns(5)
+with col1:
+    st.metric("Alerts Processed", len(state["alerts"]))
+with col2:
+    critical_count = severities.count("Critical") + severities.count("High")
+    st.metric("Critical / High", critical_count)
+with col3:
+    noise_count = severities.count("Noise") + severities.count("Low")
+    st.metric("Noise / Low", noise_count)
+with col4:
+    st.metric("Confidence", f"{conf:.0f}/100")
+with col5:
+    st.metric("Conflicts", n_conflicts)
+
+st.markdown("")  # spacing
+
 tab_arch, tab1, tab2, tab3, tab4 = st.tabs([
     "🏗️ Architecture",
     "📋 Alert Queue",
@@ -469,23 +730,13 @@ tab_arch, tab1, tab2, tab3, tab4 = st.tabs([
 
 # --- Tab: Architecture ---
 with tab_arch:
-    st.subheader("Agent Graph Architecture")
-
-    log = st.session_state.get("agent_log", "")
-    agent_statuses = parse_agent_log(log)
-    n_conflicts = len(state.get("oversight_verdict", {}).get("conflicts", []))
-    conf = state.get("confidence", 0.0)
-
+    elapsed = st.session_state.get("elapsed", 0)
+    st.caption(f"Pipeline completed in {elapsed:.1f}s — all 7 agents finished successfully")
     components.html(render_agent_graph("completed", agent_statuses, n_conflicts, conf), height=520, scrolling=False)
 
 # --- Tab 1: Alert Queue ---
 with tab1:
     st.subheader("Alert Queue")
-
-    # Build table data
-    triage_by_id = {r["alert_id"]: r for r in state.get("triage_results", [])}
-    enrich_by_id = {r["alert_id"]: r for r in state.get("enrichment_results", [])}
-    recon_by_id = {r["alert_id"]: r for r in state.get("recon_results", [])}
 
     table_data = []
     for alert in state["alerts"]:
@@ -521,20 +772,6 @@ with tab1:
         use_container_width=True,
         hide_index=True,
     )
-
-    # Summary metrics (deduplicate by alert_id to avoid inflated counts from re-investigation)
-    col1, col2, col3, col4 = st.columns(4)
-    severities = [t.get("severity", "") for t in triage_by_id.values()]
-    with col1:
-        st.metric("Total Alerts", len(state["alerts"]))
-    with col2:
-        critical_count = severities.count("Critical") + severities.count("High")
-        st.metric("Critical/High", critical_count)
-    with col3:
-        noise_count = severities.count("Noise") + severities.count("Low")
-        st.metric("Noise/Low", noise_count)
-    with col4:
-        st.metric("Confidence", f"{state.get('confidence', 0):.0f}/100")
 
 
 # --- Tab 2: Agent Activity ---
@@ -621,32 +858,36 @@ with tab3:
 
 # --- Tab 4: Final Report ---
 with tab4:
-    st.subheader("Security Briefing")
-    briefing = state.get("briefing", "No briefing generated.")
-    st.code(briefing, language="text")
+    # Voice briefing section first
+    voice_col, report_col = st.columns([1, 2])
 
-    # --- Voice Briefing (ElevenLabs TTS) ---
-    st.divider()
-    st.subheader("🔊 Voice Briefing")
-    st.caption("Hands-free audio briefing for SOC analysts during incident response — powered by ElevenLabs")
+    with voice_col:
+        st.subheader("🔊 Voice Briefing")
+        st.caption("Hands-free audio — ElevenLabs TTS")
 
-    if "voice_audio" in st.session_state and st.session_state["voice_audio"]:
-        st.audio(st.session_state["voice_audio"], format="audio/mp3")
-    elif st.button("🎙️ Generate Voice Briefing", type="primary"):
-        with st.spinner("🔊 Generating voice briefing with ElevenLabs..."):
-            try:
-                from apis.elevenlabs_tts import generate_briefing_audio, build_executive_summary
-                speech_text = build_executive_summary(state)
-                audio_bytes = generate_briefing_audio(speech_text)
-                if audio_bytes:
-                    st.session_state["voice_audio"] = audio_bytes
-                    st.rerun()
-                else:
-                    st.warning("Voice briefing unavailable. Check ELEVENLABS_KEY in .env")
-            except Exception as e:
-                st.error(f"Voice generation failed: {e}")
-    else:
-        st.info("Click **Generate Voice Briefing** to create an audio summary of the security report.")
+        if "voice_audio" in st.session_state and st.session_state["voice_audio"]:
+            st.audio(st.session_state["voice_audio"], format="audio/mp3")
+            st.success("Audio ready — ~1 min executive summary")
+        elif st.button("🎙️ Generate Voice Briefing", type="primary", use_container_width=True):
+            with st.spinner("Generating voice briefing..."):
+                try:
+                    from apis.elevenlabs_tts import generate_briefing_audio, build_executive_summary
+                    speech_text = build_executive_summary(state)
+                    audio_bytes = generate_briefing_audio(speech_text)
+                    if audio_bytes:
+                        st.session_state["voice_audio"] = audio_bytes
+                        st.rerun()
+                    else:
+                        st.warning("Check ELEVENLABS_KEY in .env")
+                except Exception as e:
+                    st.error(f"Voice generation failed: {e}")
+        else:
+            st.info("Generate an audio summary for hands-free SOC operations during incident response.")
 
-    with st.expander("Raw Oversight Verdict (JSON)"):
+    with report_col:
+        st.subheader("Security Briefing")
+        briefing = state.get("briefing", "No briefing generated.")
+        st.code(briefing, language="text")
+
+    with st.expander("🔎 Raw Oversight Verdict (JSON)"):
         st.json(state.get("oversight_verdict", {}))
