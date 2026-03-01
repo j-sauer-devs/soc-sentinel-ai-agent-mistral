@@ -6,5 +6,5 @@ venv/
 *.egg-info/
 dist/
 build/
-.streamlit/
+.streamlit/secrets.toml
 /tmp/nettacker_*

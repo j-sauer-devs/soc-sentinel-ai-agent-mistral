@@ -304,8 +304,8 @@ def render_agent_graph(phase: str, agent_statuses: dict = None,
          xmlns="http://www.w3.org/2000/svg"
          style="max-width: 920px; font-family: 'Segoe UI', system-ui, sans-serif;">
 
-        <!-- Background -->
-        <rect width="760" height="490" rx="16" fill="{bg_color}" opacity="0.6"/>
+        <!-- Background (transparent to match Streamlit theme) -->
+        <rect width="760" height="490" rx="16" fill="transparent"/>
 
         <defs>
             <!-- Arrow markers -->
@@ -420,11 +420,6 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    /* Dark SOC theme refinements */
-    .stApp {
-        background: linear-gradient(180deg, #0a0c18 0%, #0d1025 100%);
-    }
-
     /* Header styling */
     .main-title {
         background: linear-gradient(135deg, #1a1f3a 0%, #0f1328 100%);
@@ -436,19 +431,16 @@ st.markdown("""
     .main-title h1 {
         margin: 0 0 4px 0;
         font-size: 1.8rem;
-        background: linear-gradient(90deg, #60a5fa, #a78bfa);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #ffffff !important;
     }
     .main-title p {
         margin: 0;
-        color: #6b7280;
+        color: #9ca3af;
         font-size: 0.9rem;
     }
 
     /* Metric cards */
     [data-testid="stMetric"] {
-        background: linear-gradient(135deg, #151830 0%, #0f1225 100%);
         border: 1px solid #252850;
         border-radius: 10px;
         padding: 12px 16px;
@@ -464,50 +456,16 @@ st.markdown("""
         font-size: 1.6rem !important;
     }
 
-    /* Sidebar polish */
-    section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0e1028 0%, #080a18 100%);
-        border-right: 1px solid #1a1d38;
-    }
-
     /* Tab styling */
     .stTabs [data-baseweb="tab-list"] {
         gap: 4px;
-        background: #0d0f22;
-        padding: 4px;
-        border-radius: 10px;
     }
     .stTabs [data-baseweb="tab"] {
         border-radius: 8px;
         padding: 8px 16px;
-        color: #7a7f9a;
     }
     .stTabs [aria-selected="true"] {
-        background: #1a1f3a !important;
         color: #a78bfa !important;
-    }
-
-    /* Dataframe styling */
-    .stDataFrame {
-        border: 1px solid #1f2345;
-        border-radius: 10px;
-    }
-
-    /* Expander styling */
-    .streamlit-expanderHeader {
-        background: #12152a !important;
-        border-radius: 8px;
-    }
-
-    /* Progress bar theming */
-    .stProgress > div > div {
-        background-color: #1a1d38 !important;
-    }
-
-    /* Code block styling */
-    .stCodeBlock {
-        border: 1px solid #1f2345;
-        border-radius: 8px;
     }
 
     /* Running status banner */
